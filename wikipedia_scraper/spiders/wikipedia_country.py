@@ -6,11 +6,11 @@ class WikipediaCountrySpider(scrapy.Spider):
     name = 'wikipedia_country'
     start_urls = ['https://en.wikipedia.org/wiki/Visa_requirements_for_Indian_citizens']
 
-    # custom_settings = {
-    #     'FEED_URI' : 'WikiCountrylinks%(time)s.json',
-    #     'FEED_FORMAT': 'json',
-    #     'FEED_EXPORT_FIELDS': ['map', 'legend']
-    # }
+    custom_settings = {
+        'FEED_URI' : 'WikiCountrylinks%(time)s.json',
+        'FEED_FORMAT': 'json',
+        # 'FEED_EXPORT_FIELDS': ['Country', 'Visa requirement', 'Allowed stay', 'Notes (excluding departure fees)']
+    }
 
     def parse(self, response):
         image = response.xpath('.//div[@class = "thumb tnone"]/div/a/img/@src').extract()
@@ -42,30 +42,22 @@ class WikipediaCountrySpider(scrapy.Spider):
                 stay.append(x)
             else:
                 stay.append('NA')
-        for d in response.xpath('.//div[@id="mw-content-text"]/div/table[1]/tbody/tr/td[4]'):
-            if d.xpath('./ul').get() == None:
-                #print ('None here')
-                detail.append('None Here')
+        for d in response.xpath('.//div[@id="mw-content-text"]/div/table[1]/tbody/tr'):
+            s = d.xpath('./td[4]').xpath('string()').get()
+            if s is '\n' or s is None:
+                detail.append('None here')
             else:
-                for x in d.xpath('./ul'):
-                    u = list()
-                    for y in x.xpath('./li'):
-                        s = y.css('li ::text').get()
-                        t = y.xpath('./a/text()').get()
-                        if t is not None:
-                            s = s + t
-                        #print (s)
-                        u.append(s)
-                    detail.append(u)
-        print(len(detail))
-        # visa = {
-        #     head[0] : country_name,
-        #     head[1] : visa_type,
-        #     head[2] : stay
-        # }
+                detail.append(s)
+        detail.pop(0)
+        visa = {
+            head[0] : country_name,
+            head[1] : visa_type,
+            head[2] : stay,
+            head[3] : detail
+        }
         legend = dict(zip(legend_color, field))
         yield {
             'map' : image,
             'legend' : legend,
-            # 'visa' : visa
+            'visa' : visa
         }
